@@ -1,0 +1,198 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block content %}
+<style>
+    .training-container {
+        min-height: 100vh;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        position: relative;
+        z-index: 1;
+    }
+
+    .background-overlay {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: linear-gradient(rgba(255,255,255,0.3), rgba(255,255,255,0.3)),
+                    url('https://i.pinimg.com/originals/c7/65/e1/c765e14dce55ce6bd369581f792cc10d.jpg');
+        background-size: cover;
+        background-position: center;
+        z-index: 0;
+    }
+
+    .card-wrapper {
+        position: relative;
+        width: 100%;
+        max-width: 600px;
+        margin: 20px;
+        z-index: 2;
+    }
+
+    .flashcard {
+        background: rgba(255, 255, 255, 0.95);
+        border-radius: 15px;
+        padding: 2rem;
+        box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+        cursor: pointer;
+        min-height: 400px;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        font-size: 1.5rem;
+        position: relative;
+        text-align: center;
+        z-index: 2;
+    }
+
+     .word {
+        font-size: 2.5rem;
+        margin-bottom: 1.5rem;
+        width: 100%;
+    }
+
+    .transcription {
+        font-size: 1.8rem;
+        color: #6c757d;
+        margin-bottom: 1rem;
+        width: 100%;
+    }
+
+    .translation {
+        font-size: 2rem;
+        color: #0d6efd;
+        margin-top: 1rem;
+        width: 100%;
+    }
+
+    .nav-arrows {
+        position: absolute;
+        top: 50%;
+        width: 110%;
+        left: -5%;
+        display: flex;
+        justify-content: space-between;
+        transform: translateY(-50%);
+        z-index: 3;
+        pointer-events: none;
+    }
+
+    .arrow-btn {
+        pointer-events: all;
+        background: rgba(255,255,255,0.95);
+        border: none;
+        border-radius: 50%;
+        width: 60px;
+        height: 60px;
+        box-shadow: 0 2px 15px rgba(0,0,0,0.2);
+        font-size: 1.8rem;
+        color: #333;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: all 0.3s;
+    }
+
+    .arrow-btn:hover {
+        background: #fff;
+        transform: scale(1.15);
+        box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+    }
+
+
+    .exit-training-btn {
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        z-index: 1000;
+    }
+
+    .details-container {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        width: 100%;
+    }
+</style>
+
+<div class="background-overlay"></div>
+
+<a href="{% url 'home' %}" class="btn btn-danger exit-training-btn">
+    Покинуть тренировку
+</a>
+
+<div class="training-container">
+    <div class="card-wrapper">
+        <div class="nav-arrows">
+            <button class="arrow-btn" onclick="prevCard()">←</button>
+            <button class="arrow-btn" onclick="nextCard()">→</button>
+        </div>
+
+        <div class="flashcard" onclick="toggleCard()" id="flashcard">
+            <h2 id="word" class="display-4 mb-3"></h2>
+            <div id="details">
+                <div id="transcription" class="text-muted h5"></div>
+                <div id="translation" class="h4 mt-3 text-primary"></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    const cards = JSON.parse('{{ cards|escapejs }}');
+    let currentIndex = 0;
+    let isFlipped = false;
+
+    function updateCard() {
+        if(cards.length === 0) return;
+
+        const card = cards[currentIndex];
+        document.getElementById('word').textContent = card.word;
+        document.getElementById('transcription').textContent = card.transcription || '';
+        document.getElementById('translation').textContent = card.translation;
+
+        document.getElementById('details').style.display = isFlipped ? 'block' : 'none';
+    }
+
+    function toggleCard() {
+        isFlipped = !isFlipped;
+        updateCard();
+    }
+
+    function nextCard() {
+        if(currentIndex < cards.length - 1) {
+            currentIndex++;
+            isFlipped = false;
+            updateCard();
+        }
+    }
+
+    function prevCard() {
+        if(currentIndex > 0) {
+            currentIndex--;
+            isFlipped = false;
+            updateCard();
+        }
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+        if(cards.length > 0) {
+            updateCard();
+        } else {
+            document.getElementById('flashcard').innerHTML = `
+                <div class="text-center text-muted">
+                    <h4>Нет карточек для тренировки</h4>
+                    <p>Добавьте карточки на главной странице</p>
+                </div>
+            `;
+        }
+    });
+</script>
+{% endblock %}

@@ -1,0 +1,141 @@
+    {% extends "base.html" %}
+    {% load static %}
+
+    {% block extra_css %}
+    <style>
+        body {
+            background: url('https://images.unsplash.com/photo-1501504905252-473c47e087f8') no-repeat center center fixed;
+            background-size: cover;
+            height: 100vh;
+            margin: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-family: 'Roboto', sans-serif;
+            overflow: hidden;
+        }
+
+        .login-card {
+            background: rgba(255, 255, 255, 0.95);
+            padding: 2.5rem;
+            border-radius: 20px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
+            width: 90%;
+            max-width: 400px;
+            text-align: center;
+        }
+
+        .logo {
+            font-family: 'Pacifico', cursive;
+            font-size: 2.5rem;
+            color: #4a5568;
+            margin-bottom: 0.5rem;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        .form-input {
+            width: 100%;
+            padding: 12px;
+            margin: 10px 0;
+            border: 2px solid #e2e8f0;
+            border-radius: 8px;
+            font-size: 16px;
+            transition: border-color 0.3s;
+        }
+
+        .form-input:focus {
+            border-color: #667eea;
+            outline: none;
+        }
+
+        .login-button {
+            width: 100%;
+            padding: 14px;
+            background: #667eea;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 16px;
+            margin-top: 20px;
+            transition: background 0.3s;
+        }
+
+        .login-button:hover {
+            background: #764ba2;
+        }
+
+        .register-link {
+            margin-top: 20px;
+            color: #4a5568;
+        }
+
+        .register-link a {
+            color: #667eea;
+            text-decoration: none;
+            font-weight: 500;
+        }
+
+        .error-text {
+            color: #dc3545;
+            margin-top: 10px;
+            font-size: 14px;
+            display: none;  <!-- Скрываем ошибки по умолчанию -->
+        }
+
+    </style>
+    {% endblock %}
+
+    {% block content %}
+    <div class="login-card">
+        <div class="logo">LinguaFlow</div>
+        <h2 class="mb-4" style="color: #4a5568;">Вход в систему</h2>
+        <form method="post">
+            {% csrf_token %}
+            <input
+                type="text"
+                name="username"
+                class="form-input"
+                placeholder="Логин"
+                required
+            >
+            <input
+                type="password"
+                name="password"
+                class="form-input"
+                placeholder="Пароль"
+                required
+            >
+            <button type="submit" class="login-button">Войти</button>
+
+            {% if messages %}
+            <div class="message-container" style="margin-top: 10px;">
+                {% for message in messages %}
+                    <div style="color: {% if message.tags == 'error' %}red{% else %}green{% endif %};">
+                        {{ message }}
+                    </div>
+                {% endfor %}
+            </div>
+        {% endif %}
+
+            <div class="register-link">
+                Ещё нет аккаунта? <a href="{% url 'signup' %}">Создать</a>
+            </div>
+
+        {% if form.errors and request.method == "POST" %}
+                <div class="error-text">
+                    Неверный логин или пароль.
+                </div>
+            {% endif %}
+
+        </form>
+    </div>
+
+    <!-- Небольшой скрипт, выводим ошибки только после отправки формы -->
+    <script>
+        document.getElementById('loginForm').addEventListener('submit', function() {
+            document.querySelector('.error-text').style.display = 'block';
+        });
+    </script>
+
+    {% endblock %}

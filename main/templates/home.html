@@ -1,0 +1,291 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block content %}
+<style>
+    .background-overlay {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: linear-gradient(rgba(255,255,255,0.3), rgba(255,255,255,0.3)),
+                    url('https://i.pinimg.com/originals/c7/65/e1/c765e14dce55ce6bd369581f792cc10d.jpg');
+        background-size: cover;
+        background-position: center;
+        z-index: -1;
+    }
+
+    .content-wrapper {
+        position: relative;
+        background: rgba(255, 255, 255, 0);
+        padding: 2rem;
+        backdrop-filter: blur(1px);
+    }
+
+    .card {
+        border: 1px solid rgba(0, 0, 0, 0.08) !important;
+        background: rgba(255, 255, 255, 0.9) !important;
+    }
+
+    .grammar-examples {
+    background: #f8f9fa;
+    border-radius: 8px;
+    padding: 15px;
+    margin-top: 10px;
+    font-style: italic;}
+
+    .bi-plus-lg {
+        transition: transform 0.2s;
+    }
+
+    .bi-plus-lg:hover {
+        transform: scale(1.2);
+    }
+
+    .grammarDetailModal .modal-body {
+    font-size: 1.1rem;
+    line-height: 1.6;
+}
+
+    .grammarDetailContent {
+        border-left: 3px solid #198754;
+        padding-left: 1rem;
+        margin-left: 0.5rem;
+    }
+
+    .grammarDetailExamples {
+        margin-top: 1.5rem;
+        border: 1px solid #dee2e6;
+        border-radius: 8px;
+    }
+
+    .grammarExamplesList {
+        color: #6c757d;
+        font-style: italic;
+        margin-top: 0.5rem;
+    }
+
+    .grammar-note-item {
+        transition: all 0.2s;
+        position: relative;
+    }
+
+    .grammar-note-item:hover {
+        background: #f8f9fa;
+        padding-left: 1.5rem;
+    }
+
+    .grammar-note-item::after {
+        content: "➔";
+        position: absolute;
+        right: 1rem;
+        opacity: 0;
+        transition: opacity 0.2s;
+    }
+
+    .grammar-note-item:hover::after {
+        opacity: 0.5;
+    }
+
+    .modal-backdrop {
+        display: none !important;
+    }
+
+    .grammarDetailModal .modal-content {
+        box-shadow: 0 0 30px rgba(0,0,0,0.2);
+        border: none;
+        border-radius: 15px;
+    }
+
+    .grammarDetailModal .modal-header {
+        border-radius: 15px 15px 0 0;
+    }
+</style>
+
+<div class="background-overlay"></div>
+
+<!-- Оформление панели выхода -->
+{% if user.is_authenticated %}
+<div class="container">
+    <div class="content-wrapper">
+        <div class="d-flex justify-content-end align-items-center mb-4">
+            <span class="me-3 fs-5 align-middle">Вы вошли как {{ user.username }}</span>
+            <form action="{% url 'logout' %}" method="post">
+        {% csrf_token %}
+        <button type="submit" class="btn btn-danger">Выход</button>
+            </form>
+        </div>
+
+        <h2 class="mb-4">Ваши материалы</h2>
+        <a href="{% url 'training' %}" class="btn btn-primary mb-4">Начать тренировку</a>
+        <div class="row">
+
+            <!-- Карточки -->
+            <div class="col-md-6">
+                <div class="card mb-4">
+                    <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+                        <span>Карточки ({{ cards|length }})</span>
+                         <!-- Добавляем карточку (кнопка рядом с заголовком) -->
+                        <button type="button"
+                                class="btn btn-light btn-sm"
+                                data-bs-toggle="modal"
+                                data-bs-target="#addCardModal">
+                            <i class="bi bi-plus-lg"></i>
+                        </button>
+                    </div>
+                    <div class="card-body">
+                        {% if cards %}
+                            <div class="list-group">
+                                {% for word in cards %}
+                                    <div class="list-group-item">
+                                        <div class="d-flex justify-content-between align-items-center">
+                                            <div>
+                                                <h5 class="mb-1">{{ word.word }}</h5>
+                                                <small class="text-muted">{{ word.transcription }}</small>
+                                                <div class="mt-1">{{ word.translation }}</div>
+                                                {% if word.example %}
+                                                    <div class="text-muted mt-1">
+                                                        <em>"{{ word.example }}"</em>
+                                                    </div>
+                                                {% endif %}
+                                            </div>
+                                        </div>
+                                    </div>
+                                {% endfor %}
+                            </div>
+                        {% else %}
+                            <p class="text-muted">Карточек пока нет</p>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
+    <!-- Грамматика аналогично карточкам -->
+    <div class="col-md-6">
+    <div class="card">
+        <div class="card-header bg-success text-white d-flex justify-content-between align-items-center">
+            <span>Заметки по грамматике ({{ grammar_notes|length }})</span>
+            <button type="button"
+                    class="btn btn-light btn-sm"
+                    data-bs-toggle="modal"
+                    data-bs-target="#addGrammarModal">
+                <i class="bi bi-plus-lg"></i>
+            </button>
+        </div>
+        <div class="card-body">
+            {% if grammar_notes %}
+                <div class="list-group">
+                    {% for note in grammar_notes %}
+                        <button type="button"
+                                class="list-group-item list-group-item-action grammar-note-item"
+                                data-bs-toggle="modal"
+                                data-bs-target="#grammarDetailModal{{ forloop.counter }}">
+                            {{ note.title }}
+                        </button>
+
+                        <!-- Создаем окно для каждой заметки по грамматике -->
+                        <div class="modal fade" id="grammarDetailModal{{ forloop.counter }}" tabindex="-1">
+                            <div class="modal-dialog modal-lg">
+                                <div class="modal-content">
+                                    <div class="modal-header">
+                                        <h5 class="modal-title">{{ note.title }}</h5>
+                                    </div>
+                                    <div class="modal-body">
+                                        <div class="mb-4">
+                                            <h6>Правило:</h6>
+                                            <div class="grammarDetailContent ps-3">
+                                                {{ note.content|linebreaks }}
+                                            </div>
+                                        </div>
+                                        <div class="grammarDetailExamples bg-light p-3 rounded">
+                                            <h6>Примеры:</h6>
+                                            <div class="grammarExamplesList ps-3">
+                                                {{ note.examples|linebreaks|default:"<em class='text-muted'>Примеры отсутствуют</em>" }}
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="modal-footer">
+                                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Закрыть</button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    {% endfor %}
+                </div>
+            {% else %}
+                <p class="text-muted">Заметок пока нет</p>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<!-- Добавляем карточку через высплывающее окно -->
+<div class="modal fade" id="addCardModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Добавить новое слово</h5>
+
+            </div>
+            <form method="POST" action="{% url 'add_card' %}">
+                {% csrf_token %}
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label">Слово*</label>
+                        <input type="text" name="word" class="form-control" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Транскрипция</label>
+                        <input type="text" name="transcription" class="form-control">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Перевод*</label>
+                        <input type="text" name="translation" class="form-control" required>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Закрыть</button>
+                    <button type="submit" class="btn btn-primary">Сохранить</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+
+
+<!-- Добавляем заметку через высплывающее окно -->
+<div class="modal fade" id="addGrammarModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Добавить грамматическую заметку</h5>
+                </div>
+            <form method="POST" action="{% url 'add_grammar' %}">
+                {% csrf_token %}
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label">Заголовок*</label>
+                        <input type="text" name="title" class="form-control" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Содержание*</label>
+                        <textarea name="content" class="form-control" rows="4" required></textarea>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Примеры</label>
+                        <textarea name="examples" class="form-control" rows="3"></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Закрыть</button>
+                    <button type="submit" class="btn btn-primary">Сохранить</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+{% endif %}
+{% endblock %}
